@@ -1,4 +1,4 @@
-name: Deploy PayNaija Support Desk
+name: Deploy paynaija-app
 on:
   push:
     branches: [ "main" ]
