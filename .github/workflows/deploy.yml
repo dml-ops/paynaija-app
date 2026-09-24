@@ -1,4 +1,5 @@
 name: Deploy paynaija-app
+
 on:
   push:
     branches: [ "main" ]
@@ -19,28 +20,13 @@ jobs:
       - name: Deploy over SSH
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} '
-            cd ~/paynaija-support-desk
+            cd ~/paynaija-app
             git pull origin main
-            cat > .env << EOF
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            API_BASE_URL=${{ secrets.API_BASE_URL }}
-            EOF
+            printf "DATABASE_URL=%s\nAPI_BASE_URL=%s\n" "${{ secrets.DATABASE_URL }}" "${{ secrets.API_BASE_URL }}" > .env
             docker compose --env-file .env up -d --build
           '
 
       - name: Confirm health
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} '
-            for i in $(seq 1 10); do
-              if curl -sf http://localhost:5000/api/health; then
-                echo "Health check passed"
-                exit 0
-              fi
-              echo "Attempt $i failed, retrying in 5s..."
-              sleep 5
-            done
-            echo "Health check failed after retries. Recent container logs:"
-            cd ~/paynaija-support-desk
-            docker compose logs --tail=100
-            exit 1
-          '
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} \
+            'curl -sf http://localhost:5000/api/health'
