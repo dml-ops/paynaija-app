@@ -1,5 +1,4 @@
 name: Deploy PayNaija Support Desk
-
 on:
   push:
     branches: [ "main" ]
@@ -20,7 +19,7 @@ jobs:
       - name: Deploy over SSH
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} '
-            cd ~/paynaija-support-desk
+            cd ~/paynaija-app
             git pull origin main
             cat > .env << EOF
             DATABASE_URL=${{ secrets.DATABASE_URL }}
@@ -28,6 +27,9 @@ jobs:
             EOF
             docker compose --env-file .env up -d --build
           '
+
+      - name: Wait for services to start
+        run: sleep 5
 
       - name: Confirm health
         run: |
