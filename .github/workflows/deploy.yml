@@ -1,0 +1,32 @@
+name: Deploy paynaija-app
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Deploy over SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} '
+            cd ~/paynaija-app
+            git pull origin main
+            printf "DATABASE_URL=%s\nAPI_BASE_URL=%s\n" "${{ secrets.DATABASE_URL }}" "${{ secrets.API_BASE_URL }}" > .env
+            docker compose --env-file .env up -d --build
+          '
+
+      - name: Confirm health
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} \
+            'curl -sf http://localhost:5000/api/health'
